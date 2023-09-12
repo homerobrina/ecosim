@@ -97,7 +97,30 @@ int main()
         entity_grid.assign(NUM_ROWS, std::vector<entity_t>(NUM_ROWS, { empty, 0, 0}));
         
         // Create the entities
-        // <YOUR CODE HERE>
+        int i;
+        int ind1, ind2;
+        for(i = 0; i < (uint32_t)request_body["plants"]; i++){
+            static std::random_device rd;
+            static std::mt19937 gen(rd());
+            std::uniform_int_distribution<> dis(0, 14);
+            ind1 = dis(gen);
+            ind2 = dis(gen);
+
+            while(!entity_grid[ind1][ind2].type == empty){
+                ind1 = dis(gen);
+                ind2 = dis(gen);
+            }
+            
+            entity_grid[ind1][ind2].type = plant;
+            entity_grid[ind1][ind2].age = 0;
+            // entity_t *Planta = new entity_t;
+            // Planta->age = 0;
+            // Planta->energy = 0;
+            // Planta->type = plant;
+
+            // entity_grid[1][1] = *Planta;
+            
+        }
 
         // Return the JSON representation of the entity grid
         nlohmann::json json_grid = entity_grid; 
