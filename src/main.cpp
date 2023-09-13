@@ -45,6 +45,13 @@ struct entity_t
     int32_t age;
 };
 
+bool random_action(float probability) {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_real_distribution<> dis(0.0, 1.0);
+    return dis(gen) < probability;
+}
+
 // Auxiliary code to convert the entity_type_t enum to a string
 NLOHMANN_JSON_SERIALIZE_ENUM(entity_type_t, {
                                                 {empty, " "},
@@ -98,28 +105,53 @@ int main()
         
         // Create the entities
         int i;
-        int ind1, ind2;
+        int row, col;
         for(i = 0; i < (uint32_t)request_body["plants"]; i++){
             static std::random_device rd;
             static std::mt19937 gen(rd());
             std::uniform_int_distribution<> dis(0, 14);
-            ind1 = dis(gen);
-            ind2 = dis(gen);
+            row = dis(gen);
+            col = dis(gen);
 
-            while(!entity_grid[ind1][ind2].type == empty){
-                ind1 = dis(gen);
-                ind2 = dis(gen);
+            while(!entity_grid[row][col].type == empty){
+                row = dis(gen);
+                col = dis(gen);
             }
             
-            entity_grid[ind1][ind2].type = plant;
-            entity_grid[ind1][ind2].age = 0;
-            // entity_t *Planta = new entity_t;
-            // Planta->age = 0;
-            // Planta->energy = 0;
-            // Planta->type = plant;
+            entity_grid[row][col].type = plant;
+            entity_grid[row][col].age = 0; 
+        }
+        for(i = 0; i < (uint32_t)request_body["herbivores"]; i++){
+            static std::random_device rd;
+            static std::mt19937 gen(rd());
+            std::uniform_int_distribution<> dis(0, 14);
+            row = dis(gen);
+            col = dis(gen);
 
-            // entity_grid[1][1] = *Planta;
+            while(!entity_grid[row][col].type == empty){
+                row = dis(gen);
+                col = dis(gen);
+            }
             
+            entity_grid[row][col].type = herbivore;
+            entity_grid[row][col].age = 0;
+            entity_grid[row][col].energy = 100; 
+        }
+        for(i = 0; i < (uint32_t)request_body["carnivores"]; i++){
+            static std::random_device rd;
+            static std::mt19937 gen(rd());
+            std::uniform_int_distribution<> dis(0, 14);
+            row = dis(gen);
+            col = dis(gen);
+
+            while(!entity_grid[row][col].type == empty){
+                row = dis(gen);
+                col = dis(gen);
+            }
+            
+            entity_grid[row][col].type = carnivore;
+            entity_grid[row][col].age = 0;
+            entity_grid[row][col].energy = 100;
         }
 
         // Return the JSON representation of the entity grid
@@ -134,7 +166,39 @@ int main()
         // Simulate the next iteration
         // Iterate over the entity grid and simulate the behaviour of each entity
         
-        // <YOUR CODE HERE>
+        int i, j;
+        for (i = 0; i < NUM_ROWS; i++){
+            for (j = 0; j < NUM_ROWS; j++){
+                if(entity_grid[i][j].type != empty){
+                    if(entity_grid[i][j].type == plant){
+                        if(entity_grid[i][j].age == 10){
+                            entity_grid[i][j].type = empty;
+                            entity_grid[i][j].age = 0;
+                        }
+                        entity_grid[i][j].age++;
+                        if(random_action(0.2)){
+                            // escolher uma casa (VAZIA) ao redor aleatóriamente para criar uma nova planta
+                        }
+                    }
+                    if(entity_grid[i][j].type == herbivore){
+                        if(entity_grid[i][j].age == 50 || entity_grid[i][j].energy == 0){
+                            entity_grid[i][j].type = empty;
+                            entity_grid[i][j].age = 0;
+                            entity_grid[i][j].energy = 0;
+                        }
+                        entity_grid[i][j].age++;
+                    }
+                    if(entity_grid[i][j].type == carnivore){
+                        if(entity_grid[i][j].age == 80 || entity_grid[i][j].energy == 0){
+                            entity_grid[i][j].type = empty;
+                            entity_grid[i][j].age = 0;
+                            entity_grid[i][j].energy = 0;
+                        }
+                        entity_grid[i][j].age++;
+                    }
+                }
+            }
+        }
         
         // Return the JSON representation of the entity grid
         nlohmann::json json_grid = entity_grid; 
