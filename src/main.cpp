@@ -4,6 +4,7 @@
 #include "crow_all.h"
 #include "json.hpp"
 #include <random>
+#include <vector>
 
 static const uint32_t NUM_ROWS = 15;
 
@@ -50,6 +51,11 @@ bool random_action(float probability) {
     static std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(0.0, 1.0);
     return dis(gen) < probability;
+}
+
+pos_t pick_random_cell(std::vector<pos_t> positions){
+    int rand_index = rand() % positions.size();
+    return positions[rand_index];
 }
 
 // Auxiliary code to convert the entity_type_t enum to a string
@@ -167,6 +173,9 @@ int main()
         // Iterate over the entity grid and simulate the behaviour of each entity
         
         int i, j;
+        pos_t valid_position;
+        pos_t chosed_position;
+        std::vector<pos_t> empty_positions;
         for (i = 0; i < NUM_ROWS; i++){
             for (j = 0; j < NUM_ROWS; j++){
                 if(entity_grid[i][j].type != empty){
@@ -174,21 +183,90 @@ int main()
                         if(entity_grid[i][j].age == 10){
                             entity_grid[i][j].type = empty;
                             entity_grid[i][j].age = 0;
+                        } else if(random_action(0.2)){
+                            if(i + 1 < NUM_ROWS){
+                                if(entity_grid[i+1][j].type == empty){
+                                    valid_position.i = i+1;
+                                    valid_position.j = j;
+                                    empty_positions.push_back(valid_position);
+                                }
+                            }
+                            if(j + 1 < NUM_ROWS){
+                                if(entity_grid[i][j+1].type == empty){
+                                    valid_position.i = i;
+                                    valid_position.j = j+1;
+                                    empty_positions.push_back(valid_position);
+                                }
+                            }
+                            if(i - 1 >= 0){
+                                if(entity_grid[i-1][j].type == empty){
+                                    valid_position.i = i-1;
+                                    valid_position.j = j;
+                                    empty_positions.push_back(valid_position);
+                                }
+                            }
+                            if(j - 1 >= 0){
+                                if(entity_grid[j-1][j].type == empty){
+                                    valid_position.i = i;
+                                    valid_position.j = j-1;
+                                    empty_positions.push_back(valid_position);
+                                }
+                            }
+                            if(!empty_positions.empty()){
+                                chosed_position = pick_random_cell(empty_positions);
+                                entity_grid[chosed_position.i][chosed_position.j].type = plant;
+                                entity_grid[chosed_position.i][chosed_position.j].age = 0;
+
+                            }
+                            empty_positions.clear();
                         }
                         entity_grid[i][j].age++;
-                        if(random_action(0.2)){
-                            // escolher uma casa (VAZIA) ao redor aleatóriamente para criar uma nova planta
-                        }
-                    }
-                    if(entity_grid[i][j].type == herbivore){
+                    } else if(entity_grid[i][j].type == herbivore){
                         if(entity_grid[i][j].age == 50 || entity_grid[i][j].energy == 0){
                             entity_grid[i][j].type = empty;
                             entity_grid[i][j].age = 0;
                             entity_grid[i][j].energy = 0;
-                        }
-                        entity_grid[i][j].age++;
-                    }
-                    if(entity_grid[i][j].type == carnivore){
+                        } else if(random_action(0.7)){
+                            if(i + 1 < NUM_ROWS){
+                                if(entity_grid[i+1][j].type == empty){
+                                    valid_position.i = i+1;
+                                    valid_position.j = j;
+                                    empty_positions.push_back(valid_position);
+                                }
+                            }
+                            if(j + 1 < NUM_ROWS){
+                                if(entity_grid[i][j+1].type == empty){
+                                    valid_position.i = i;
+                                    valid_position.j = j+1;
+                                    empty_positions.push_back(valid_position);
+                                }
+                            }
+                            if(i - 1 >= 0){
+                                if(entity_grid[i-1][j].type == empty){
+                                    valid_position.i = i-1;
+                                    valid_position.j = j;
+                                    empty_positions.push_back(valid_position);
+                                }
+                            }
+                            if(j - 1 >= 0){
+                                if(entity_grid[i][j-1].type == empty){
+                                    valid_position.i = i;
+                                    valid_position.j = j-1;
+                                    empty_positions.push_back(valid_position);
+                                }
+                            }
+                            if(!empty_positions.empty()){
+                                chosed_position = pick_random_cell(empty_positions);
+                                entity_grid[chosed_position.i][chosed_position.j].type = herbivore;
+                                entity_grid[chosed_position.i][chosed_position.j].age = entity_grid[i][j].age + 1;
+                                entity_grid[chosed_position.i][chosed_position.j].energy = entity_grid[i][j].energy - 5;
+                                entity_grid[i][j].age = 0;
+                                entity_grid[i][j].energy = 0;
+                                entity_grid[i][j].type = empty;
+                                empty_positions.clear();
+                            } else entity_grid[i][j].age++;
+                        } //else entity_grid[i][j].age++;
+                    } else if(entity_grid[i][j].type == carnivore){
                         if(entity_grid[i][j].age == 80 || entity_grid[i][j].energy == 0){
                             entity_grid[i][j].type = empty;
                             entity_grid[i][j].age = 0;
