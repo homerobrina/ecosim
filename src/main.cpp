@@ -18,7 +18,7 @@ const uint32_t THRESHOLD_ENERGY_FOR_REPRODUCTION = 20;
 
 // Probabilities
 const double PLANT_REPRODUCTION_PROBABILITY = 0.2;
-const double HERBIVORE_REPRODUCTION_PROBABILITY = 0.1;
+const double HERBIVORE_REPRODUCTION_PROBABILITY = 0.075;
 const double CARNIVORE_REPRODUCTION_PROBABILITY = 0.025;
 const double HERBIVORE_MOVE_PROBABILITY = 0.7;
 const double HERBIVORE_EAT_PROBABILITY = 0.9;
@@ -188,7 +188,7 @@ int main()
         pos_t current_pos;
         std::vector<pos_t> empty_positions;
         std::vector<pos_t> already_atualized_pos, new_plants, new_herbs;
-        std::vector<std::pair<pos_t,pos_t>> herb_move;
+        std::vector<std::pair<pos_t,pos_t>> herb_move, plant_eated;
         for (i = 0; i < NUM_ROWS; i++){
             for (j = 0; j < NUM_ROWS; j++){
                 current_pos.i = i;
@@ -278,6 +278,41 @@ int main()
                                     already_atualized_pos.push_back(chose_position);
                                     empty_positions.clear();
                                 } else entity_grid[i][j].age++;
+                            } else if(random_action(HERBIVORE_EAT_PROBABILITY)){
+                                if(i + 1 < NUM_ROWS){
+                                    if(entity_grid[i+1][j].type == plant){
+                                        valid_position.i = i+1;
+                                        valid_position.j = j;
+                                        empty_positions.push_back(valid_position);
+                                    }
+                                }
+                                if(j + 1 < NUM_ROWS){
+                                    if(entity_grid[i][j+1].type == plant){
+                                        valid_position.i = i;
+                                        valid_position.j = j+1;
+                                        empty_positions.push_back(valid_position);
+                                    }
+                                }
+                                if(i - 1 >= 0){
+                                    if(entity_grid[i-1][j].type == plant){
+                                        valid_position.i = i-1;
+                                        valid_position.j = j;
+                                        empty_positions.push_back(valid_position);
+                                    }
+                                }
+                                if(j - 1 >= 0){
+                                    if(entity_grid[i][j-1].type == plant){
+                                        valid_position.i = i;
+                                        valid_position.j = j-1;
+                                        empty_positions.push_back(valid_position);
+                                    }
+                                }
+                                if(!empty_positions.empty()){
+                                    chose_position = pick_random_cell(empty_positions);
+                                    plant_eated.push_back(std::make_pair(current_pos, chose_position));
+                                    already_atualized_pos.push_back(chose_position);
+                                    empty_positions.clear();
+                                } else entity_grid[i][j].age++;
                             } else if(random_action(HERBIVORE_MOVE_PROBABILITY)){
                                 if(i + 1 < NUM_ROWS){
                                     if(entity_grid[i+1][j].type == empty){
@@ -343,9 +378,18 @@ int main()
             entity_grid[it.first.i][it.first.j].energy = 0;
             entity_grid[it.first.i][it.first.j].type = empty;
         }
+        for(auto &it : plant_eated){
+            entity_grid[it.second.i][it.second.j].type = herbivore;
+            entity_grid[it.second.i][it.second.j].age = entity_grid[it.first.i][it.first.j].age + 1;
+            entity_grid[it.second.i][it.second.j].energy = entity_grid[it.first.i][it.first.j].energy + 30;
+            entity_grid[it.first.i][it.first.j].age = 0;
+            entity_grid[it.first.i][it.first.j].energy = 0;
+            entity_grid[it.first.i][it.first.j].type = empty;
+        }
         new_plants.clear();
         new_herbs.clear();
         herb_move.clear();
+        plant_eated.clear();
         already_atualized_pos.clear();
         // Return the JSON representation of the entity grid
         nlohmann::json json_grid = entity_grid; 
