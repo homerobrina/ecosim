@@ -186,54 +186,92 @@ int main()
         pos_t valid_position;
         pos_t chose_position;
         pos_t current_pos;
-        std::vector<pos_t> empty_positions;
-        std::vector<pos_t> already_atualized_pos, new_plants, new_herbs;
-        std::vector<std::pair<pos_t,pos_t>> herb_move, plant_eated;
+        std::vector<pos_t> empty_positions, plant_positions, herb_positions;
+        std::vector<pos_t> already_atualized_pos, new_plants, new_herbs, new_carns;
+        std::vector<std::pair<pos_t,pos_t>> herb_move, carn_move, plant_eated, herb_eated;
         for (i = 0; i < NUM_ROWS; i++){
             for (j = 0; j < NUM_ROWS; j++){
                 current_pos.i = i;
                 current_pos.j = j;
                 if(check_cell(current_pos, already_atualized_pos)){
                     if(entity_grid[i][j].type != empty){
+                        if(i + 1 < NUM_ROWS){
+                            if(entity_grid[i+1][j].type == empty){
+                                valid_position.i = i+1;
+                                valid_position.j = j;
+                                empty_positions.push_back(valid_position);
+                            }
+                            if(entity_grid[i+1][j].type == plant){
+                                valid_position.i = i+1;
+                                valid_position.j = j;
+                                plant_positions.push_back(valid_position);
+                            }
+                            if(entity_grid[i+1][j].type == herbivore){
+                                valid_position.i = i+1;
+                                valid_position.j = j;
+                                herb_positions.push_back(valid_position);
+                            }
+                        }
+                        if(j + 1 < NUM_ROWS){
+                            if(entity_grid[i][j+1].type == empty){
+                                valid_position.i = i;
+                                valid_position.j = j+1;
+                                empty_positions.push_back(valid_position);
+                            }
+                            if(entity_grid[i][j+1].type == plant){
+                                valid_position.i = i;
+                                valid_position.j = j+1;
+                                plant_positions.push_back(valid_position);
+                            }
+                            if(entity_grid[i][j+1].type == herbivore){
+                                valid_position.i = i;
+                                valid_position.j = j+1;
+                                herb_positions.push_back(valid_position);
+                            }
+                        }
+                        if(i - 1 >= 0){
+                            if(entity_grid[i-1][j].type == empty){
+                                valid_position.i = i-1;
+                                valid_position.j = j;
+                                empty_positions.push_back(valid_position);
+                            }
+                            if(entity_grid[i-1][j].type == plant){
+                                valid_position.i = i-1;
+                                valid_position.j = j;
+                                plant_positions.push_back(valid_position);
+                            }
+                            if(entity_grid[i-1][j].type == herbivore){
+                                valid_position.i = i-1;
+                                valid_position.j = j;
+                                herb_positions.push_back(valid_position);
+                            }
+                        }
+                        if(j - 1 >= 0){
+                            if(entity_grid[j][j-1].type == empty){
+                                valid_position.i = i;
+                                valid_position.j = j-1;
+                                empty_positions.push_back(valid_position);
+                            }
+                            if(entity_grid[j][j-1].type == plant){
+                                valid_position.i = i;
+                                valid_position.j = j-1;
+                                plant_positions.push_back(valid_position);
+                            }
+                            if(entity_grid[j][j-1].type == herbivore){
+                                valid_position.i = i;
+                                valid_position.j = j-1;
+                                herb_positions.push_back(valid_position);
+                            }
+                        }
                         if(entity_grid[i][j].type == plant){
                             if(entity_grid[i][j].age == PLANT_MAXIMUM_AGE){
                                 entity_grid[i][j].type = empty;
                                 entity_grid[i][j].age = 0;
-                            } else if(random_action(PLANT_REPRODUCTION_PROBABILITY)){
-                                if(i + 1 < NUM_ROWS){
-                                    if(entity_grid[i+1][j].type == empty){
-                                        valid_position.i = i+1;
-                                        valid_position.j = j;
-                                        empty_positions.push_back(valid_position);
-                                    }
-                                }
-                                if(j + 1 < NUM_ROWS){
-                                    if(entity_grid[i][j+1].type == empty){
-                                        valid_position.i = i;
-                                        valid_position.j = j+1;
-                                        empty_positions.push_back(valid_position);
-                                    }
-                                }
-                                if(i - 1 >= 0){
-                                    if(entity_grid[i-1][j].type == empty){
-                                        valid_position.i = i-1;
-                                        valid_position.j = j;
-                                        empty_positions.push_back(valid_position);
-                                    }
-                                }
-                                if(j - 1 >= 0){
-                                    if(entity_grid[j][j-1].type == empty){
-                                        valid_position.i = i;
-                                        valid_position.j = j-1;
-                                        empty_positions.push_back(valid_position);
-                                    }
-                                }
-                                if(!empty_positions.empty()){
-                                    chose_position = pick_random_cell(empty_positions);
-                                    new_plants.push_back(chose_position);
-                                    already_atualized_pos.push_back(chose_position);
-                                    empty_positions.clear();
-                                }
+                            } else if(random_action(PLANT_REPRODUCTION_PROBABILITY) && !empty_positions.empty()){
+                                chose_position = pick_random_cell(empty_positions);
+                                new_plants.push_back(chose_position);
+                                already_atualized_pos.push_back(chose_position);
+                                empty_positions.clear();
                             }
                             entity_grid[i][j].age++;
                         } else if(entity_grid[i][j].type == herbivore){
@@ -242,120 +280,48 @@ int main()
                                 entity_grid[i][j].age = 0;
                                 entity_grid[i][j].energy = 0;
                             } else if(random_action(HERBIVORE_REPRODUCTION_PROBABILITY) && 
-                                      entity_grid[i][j].energy > THRESHOLD_ENERGY_FOR_REPRODUCTION){
-                                if(i + 1 < NUM_ROWS){
-                                    if(entity_grid[i+1][j].type == empty){
-                                        valid_position.i = i+1;
-                                        valid_position.j = j;
-                                        empty_positions.push_back(valid_position);
-                                    }
-                                }
-                                if(j + 1 < NUM_ROWS){
-                                    if(entity_grid[i][j+1].type == empty){
-                                        valid_position.i = i;
-                                        valid_position.j = j+1;
-                                        empty_positions.push_back(valid_position);
-                                    }
-                                }
-                                if(i - 1 >= 0){
-                                    if(entity_grid[i-1][j].type == empty){
-                                        valid_position.i = i-1;
-                                        valid_position.j = j;
-                                        empty_positions.push_back(valid_position);
-                                    }
-                                }
-                                if(j - 1 >= 0){
-                                    if(entity_grid[i][j-1].type == empty){
-                                        valid_position.i = i;
-                                        valid_position.j = j-1;
-                                        empty_positions.push_back(valid_position);
-                                    }
-                                }
-                                if(!empty_positions.empty()){
+                                      entity_grid[i][j].energy > THRESHOLD_ENERGY_FOR_REPRODUCTION &&
+                                      !empty_positions.empty()){
                                     entity_grid[i][j].energy = entity_grid[i][j].energy - 10;
                                     chose_position = pick_random_cell(empty_positions);
                                     new_herbs.push_back(chose_position);
                                     already_atualized_pos.push_back(chose_position);
                                     empty_positions.clear();
-                                } else entity_grid[i][j].age++;
-                            } else if(random_action(HERBIVORE_EAT_PROBABILITY)){
-                                if(i + 1 < NUM_ROWS){
-                                    if(entity_grid[i+1][j].type == plant){
-                                        valid_position.i = i+1;
-                                        valid_position.j = j;
-                                        empty_positions.push_back(valid_position);
-                                    }
-                                }
-                                if(j + 1 < NUM_ROWS){
-                                    if(entity_grid[i][j+1].type == plant){
-                                        valid_position.i = i;
-                                        valid_position.j = j+1;
-                                        empty_positions.push_back(valid_position);
-                                    }
-                                }
-                                if(i - 1 >= 0){
-                                    if(entity_grid[i-1][j].type == plant){
-                                        valid_position.i = i-1;
-                                        valid_position.j = j;
-                                        empty_positions.push_back(valid_position);
-                                    }
-                                }
-                                if(j - 1 >= 0){
-                                    if(entity_grid[i][j-1].type == plant){
-                                        valid_position.i = i;
-                                        valid_position.j = j-1;
-                                        empty_positions.push_back(valid_position);
-                                    }
-                                }
-                                if(!empty_positions.empty()){
-                                    chose_position = pick_random_cell(empty_positions);
+                            } else if(random_action(HERBIVORE_EAT_PROBABILITY) && !plant_positions.empty()){
+                                    chose_position = pick_random_cell(plant_positions);
                                     plant_eated.push_back(std::make_pair(current_pos, chose_position));
                                     already_atualized_pos.push_back(chose_position);
-                                    empty_positions.clear();
-                                } else entity_grid[i][j].age++;
-                            } else if(random_action(HERBIVORE_MOVE_PROBABILITY)){
-                                if(i + 1 < NUM_ROWS){
-                                    if(entity_grid[i+1][j].type == empty){
-                                        valid_position.i = i+1;
-                                        valid_position.j = j;
-                                        empty_positions.push_back(valid_position);
-                                    }
-                                }
-                                if(j + 1 < NUM_ROWS){
-                                    if(entity_grid[i][j+1].type == empty){
-                                        valid_position.i = i;
-                                        valid_position.j = j+1;
-                                        empty_positions.push_back(valid_position);
-                                    }
-                                }
-                                if(i - 1 >= 0){
-                                    if(entity_grid[i-1][j].type == empty){
-                                        valid_position.i = i-1;
-                                        valid_position.j = j;
-                                        empty_positions.push_back(valid_position);
-                                    }
-                                }
-                                if(j - 1 >= 0){
-                                    if(entity_grid[i][j-1].type == empty){
-                                        valid_position.i = i;
-                                        valid_position.j = j-1;
-                                        empty_positions.push_back(valid_position);
-                                    }
-                                }
-                                if(!empty_positions.empty()){
+                                    plant_positions.clear();
+                            } else if(random_action(HERBIVORE_MOVE_PROBABILITY) && !empty_positions.empty()){
                                     chose_position = pick_random_cell(empty_positions);
                                     herb_move.push_back(std::make_pair(current_pos, chose_position));
                                     already_atualized_pos.push_back(chose_position);
                                     empty_positions.clear();
-                                } else entity_grid[i][j].age++;
                             } else entity_grid[i][j].age++;
                         } else if(entity_grid[i][j].type == carnivore){
                             if(entity_grid[i][j].age == 80 || entity_grid[i][j].energy == 0){
                                 entity_grid[i][j].type = empty;
                                 entity_grid[i][j].age = 0;
                                 entity_grid[i][j].energy = 0;
-                            }
-                            entity_grid[i][j].age++;
+                            } else if(random_action(CARNIVORE_REPRODUCTION_PROBABILITY) && 
+                                      entity_grid[i][j].energy > THRESHOLD_ENERGY_FOR_REPRODUCTION &&
+                                      !empty_positions.empty()){
+                                    entity_grid[i][j].energy = entity_grid[i][j].energy - 10;
+                                    chose_position = pick_random_cell(empty_positions);
+                                    new_carns.push_back(chose_position);
+                                    already_atualized_pos.push_back(chose_position);
+                                    empty_positions.clear();
+                            } else if(random_action(CARNIVORE_EAT_PROBABILITY) && !herb_positions.empty()){
+                                    chose_position = pick_random_cell(herb_positions);
+                                    herb_eated.push_back(std::make_pair(current_pos, chose_position));
+                                    already_atualized_pos.push_back(chose_position);
+                                    herb_positions.clear();
+                            } else if(random_action(HERBIVORE_MOVE_PROBABILITY) && !empty_positions.empty()){
+                                    chose_position = pick_random_cell(empty_positions);
+                                    carn_move.push_back(std::make_pair(current_pos, chose_position));
+                                    already_atualized_pos.push_back(chose_position);
+                                    empty_positions.clear();
+                            } else entity_grid[i][j].age++;
                         }
                     }
                 }
@@ -370,8 +336,21 @@ int main()
             entity_grid[it.i][it.j].age = 0;
             entity_grid[it.i][it.j].energy = 100;
         }
+        for(auto &it : new_carns){
+            entity_grid[it.i][it.j].type = carnivore;
+            entity_grid[it.i][it.j].age = 0;
+            entity_grid[it.i][it.j].energy = 100;
+        }
         for(auto &it : herb_move){
             entity_grid[it.second.i][it.second.j].type = herbivore;
+            entity_grid[it.second.i][it.second.j].age = entity_grid[it.first.i][it.first.j].age + 1;
+            entity_grid[it.second.i][it.second.j].energy = entity_grid[it.first.i][it.first.j].energy - 5;
+            entity_grid[it.first.i][it.first.j].age = 0;
+            entity_grid[it.first.i][it.first.j].energy = 0;
+            entity_grid[it.first.i][it.first.j].type = empty;
+        }
+        for(auto &it : carn_move){
+            entity_grid[it.second.i][it.second.j].type = carnivore;
             entity_grid[it.second.i][it.second.j].age = entity_grid[it.first.i][it.first.j].age + 1;
             entity_grid[it.second.i][it.second.j].energy = entity_grid[it.first.i][it.first.j].energy - 5;
             entity_grid[it.first.i][it.first.j].age = 0;
@@ -386,10 +365,21 @@ int main()
             entity_grid[it.first.i][it.first.j].energy = 0;
             entity_grid[it.first.i][it.first.j].type = empty;
         }
+        for(auto &it : herb_eated){
+            entity_grid[it.second.i][it.second.j].type = carnivore;
+            entity_grid[it.second.i][it.second.j].age = entity_grid[it.first.i][it.first.j].age + 1;
+            entity_grid[it.second.i][it.second.j].energy = entity_grid[it.first.i][it.first.j].energy + 30;
+            entity_grid[it.first.i][it.first.j].age = 0;
+            entity_grid[it.first.i][it.first.j].energy = 0;
+            entity_grid[it.first.i][it.first.j].type = empty;
+        }
         new_plants.clear();
         new_herbs.clear();
+        new_carns.clear();
         herb_move.clear();
+        carn_move.clear();
         plant_eated.clear();
+        herb_eated.clear();
         already_atualized_pos.clear();
         // Return the JSON representation of the entity grid
         nlohmann::json json_grid = entity_grid; 
