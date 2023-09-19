@@ -6,7 +6,6 @@
 #include <random>
 #include <vector>
 #include <utility>
-#include <mutex>
 
 static const uint32_t NUM_ROWS = 15;
 
@@ -46,15 +45,7 @@ struct entity_t
     entity_type_t type;
     int32_t energy;
     int32_t age;
-    std::mutex mutex;
 };
-
-// Grid that contains the entities
-static std::vector<std::vector<entity_t>> entity_grid;
-
-std::vector<pos_t> empty_positions, plant_positions, herb_positions;
-std::vector<pos_t> already_atualized_pos, new_plants, new_herbs, new_carns;
-std::vector<std::pair<pos_t,pos_t>> herb_move, carn_move, plant_eated, herb_eated;
 
 bool random_action(float probability)
 {
@@ -80,113 +71,6 @@ bool check_cell(pos_t pos, std::vector<pos_t> already_atualized_pos)
         }
     }
     return true;
-}
-
-std::vector<pos_t> check_spec_type(pos_t pos, entity_type_t type){
-    pos_t valid_position;
-    std::vector<pos_t> val_positions;
-    int i = pos.i;
-    int j = pos.j;
-    if(i + 1 < NUM_ROWS){
-        if(check_cell(valid_position, already_atualized_pos)){
-            if(entity_grid[i+1][j].type == type){
-                valid_position.i = i+1;
-                valid_position.j = j;
-                val_positions.push_back(valid_position);
-            }
-        }
-    }
-    if(j + 1 < NUM_ROWS){
-        if(check_cell(valid_position, already_atualized_pos)){
-            if(entity_grid[i][j+1].type == type){
-                valid_position.i = i;
-                valid_position.j = j+1;
-                val_positions.push_back(valid_position);
-            }
-        }
-    }
-    if(i - 1 >= 0){
-        if(check_cell(valid_position, already_atualized_pos)){
-            if(entity_grid[i-1][j].type == type){
-                valid_position.i = i-1;
-                valid_position.j = j;
-                val_positions.push_back(valid_position);
-            }
-        }
-    }
-    if(j - 1 >= 0){
-        if(check_cell(valid_position, already_atualized_pos)){
-            if(entity_grid[j][j-1].type == type){
-                valid_position.i = i;
-                valid_position.j = j-1;
-                val_positions.push_back(valid_position);
-            }
-        }
-    }
-}
-
-void simulate_plant(int i, int j){
-    if(entity_grid[i][j].age == PLANT_MAXIMUM_AGE){
-        entity_grid[i][j].type = empty;
-        entity_grid[i][j].age = 0;
-    } else if(random_action(PLANT_REPRODUCTION_PROBABILITY) && !empty_positions.empty()){
-         pos_t chose_position = pick_random_cell(empty_positions);
-        // Armazena a informação ao invés de atualizar imediatamente a matriz, para evitar que essa informação seja utilizada na mesma iteração
-        new_plants.push_back(chose_position);
-        // "Reserva" a célula para que não seja usada por outra entidade
-        already_atualized_pos.push_back(chose_position);
-        entity_grid[i][j].age++;
-    } else entity_grid[i][j].age++;
-}
-
-void simulate_herb(pos_t pos){
-    int i = pos.i;
-    int j = pos.j;
-    if(entity_grid[i][j].age == 50 || entity_grid[i][j].energy == 0){
-        entity_grid[i][j].type = empty;
-        entity_grid[i][j].age = 0;
-        entity_grid[i][j].energy = 0;
-    } else if(random_action(HERBIVORE_REPRODUCTION_PROBABILITY) && 
-                entity_grid[i][j].energy > THRESHOLD_ENERGY_FOR_REPRODUCTION &&
-                !empty_positions.empty()){
-            entity_grid[i][j].energy = entity_grid[i][j].energy - 10;
-            pos_t chose_position = pick_random_cell(empty_positions);
-            new_herbs.push_back(chose_position);
-            already_atualized_pos.push_back(chose_position);
-    } else if(random_action(HERBIVORE_EAT_PROBABILITY) && !plant_positions.empty()){
-            pos_t chose_position = pick_random_cell(plant_positions);
-            plant_eated.push_back(std::make_pair(pos, chose_position));
-            already_atualized_pos.push_back(chose_position);
-    } else if(random_action(HERBIVORE_MOVE_PROBABILITY) && !empty_positions.empty()){
-            pos_t chose_position = pick_random_cell(empty_positions);
-            herb_move.push_back(std::make_pair(pos, chose_position));
-            already_atualized_pos.push_back(chose_position);
-    } else entity_grid[i][j].age++;
-}
-
-void simulate_carn(pos_t pos){
-    int i = pos.i;
-    int j = pos.j;
-    if(entity_grid[i][j].age == 80 || entity_grid[i][j].energy == 0){
-        entity_grid[i][j].type = empty;
-        entity_grid[i][j].age = 0;
-        entity_grid[i][j].energy = 0;
-    } else if(random_action(CARNIVORE_REPRODUCTION_PROBABILITY) && 
-                entity_grid[i][j].energy > THRESHOLD_ENERGY_FOR_REPRODUCTION &&
-                !empty_positions.empty()){
-            entity_grid[i][j].energy = entity_grid[i][j].energy - 10;
-            pos_t chose_position = pick_random_cell(empty_positions);
-            new_carns.push_back(chose_position);
-            already_atualized_pos.push_back(chose_position);
-    } else if(random_action(CARNIVORE_EAT_PROBABILITY) && !herb_positions.empty()){
-            pos_t chose_position = pick_random_cell(herb_positions);
-            herb_eated.push_back(std::make_pair(pos, chose_position));
-            already_atualized_pos.push_back(chose_position);
-    } else if(random_action(CARNIVORE_MOVE_PROBABILITY) && !empty_positions.empty()){
-            pos_t chose_position = pick_random_cell(empty_positions);
-            carn_move.push_back(std::make_pair(pos, chose_position));
-            already_atualized_pos.push_back(chose_position);
-    } else entity_grid[i][j].age++;
 }
 
 // Auxiliary code to convert the entity_type_t enum to a string
@@ -238,7 +122,7 @@ int main()
 
         // Clear the entity grid
         entity_grid.clear();
-        entity_grid.assign(NUM_ROWS, std::vector<entity_t>(NUM_ROWS, { empty, 0, 0, std::move(std::mutex{})}));
+        entity_grid.assign(NUM_ROWS, std::vector<entity_t>(NUM_ROWS, { empty, 0, 0}));
         
         // Create the entities
         int i;
@@ -307,7 +191,9 @@ int main()
         pos_t valid_position;
         pos_t chose_position;
         pos_t current_pos;
-
+        std::vector<pos_t> empty_positions, plant_positions, herb_positions;
+        std::vector<pos_t> already_atualized_pos, new_plants, new_herbs, new_carns;
+        std::vector<std::pair<pos_t,pos_t>> herb_move, carn_move, plant_eated, herb_eated;
         for (i = 0; i < NUM_ROWS; i++){
             for (j = 0; j < NUM_ROWS; j++){
                 current_pos.i = i;
@@ -373,11 +259,59 @@ int main()
                         }
                         // Verifica o tipo da célula e realizar as possíveis açoes
                         if(entity_grid[i][j].type == plant){
-                            std::thread t_plant(simulate_plant,i,j);
+                            if(entity_grid[i][j].age == PLANT_MAXIMUM_AGE){
+                                entity_grid[i][j].type = empty;
+                                entity_grid[i][j].age = 0;
+                            } else if(random_action(PLANT_REPRODUCTION_PROBABILITY) && !empty_positions.empty()){
+                                chose_position = pick_random_cell(empty_positions);
+                                // Armazena a informação ao invés de atualizar imediatamente a matriz, para evitar que essa informação seja utilizada na mesma iteração
+                                new_plants.push_back(chose_position);
+                                // "Reserva" a célula para que não seja usada por outra entidade
+                                already_atualized_pos.push_back(chose_position);
+                                entity_grid[i][j].age++;
+                            } else entity_grid[i][j].age++;
                         } else if(entity_grid[i][j].type == herbivore){
-                            std::thread t_plant(simulate_plant,current_pos);
+                            if(entity_grid[i][j].age == 50 || entity_grid[i][j].energy == 0){
+                                entity_grid[i][j].type = empty;
+                                entity_grid[i][j].age = 0;
+                                entity_grid[i][j].energy = 0;
+                            } else if(random_action(HERBIVORE_REPRODUCTION_PROBABILITY) && 
+                                      entity_grid[i][j].energy > THRESHOLD_ENERGY_FOR_REPRODUCTION &&
+                                      !empty_positions.empty()){
+                                    entity_grid[i][j].energy = entity_grid[i][j].energy - 10;
+                                    chose_position = pick_random_cell(empty_positions);
+                                    new_herbs.push_back(chose_position);
+                                    already_atualized_pos.push_back(chose_position);
+                            } else if(random_action(HERBIVORE_EAT_PROBABILITY) && !plant_positions.empty()){
+                                    chose_position = pick_random_cell(plant_positions);
+                                    plant_eated.push_back(std::make_pair(current_pos, chose_position));
+                                    already_atualized_pos.push_back(chose_position);
+                            } else if(random_action(HERBIVORE_MOVE_PROBABILITY) && !empty_positions.empty()){
+                                    chose_position = pick_random_cell(empty_positions);
+                                    herb_move.push_back(std::make_pair(current_pos, chose_position));
+                                    already_atualized_pos.push_back(chose_position);
+                            } else entity_grid[i][j].age++;
                         } else if(entity_grid[i][j].type == carnivore){
-                            
+                            if(entity_grid[i][j].age == 80 || entity_grid[i][j].energy == 0){
+                                entity_grid[i][j].type = empty;
+                                entity_grid[i][j].age = 0;
+                                entity_grid[i][j].energy = 0;
+                            } else if(random_action(CARNIVORE_REPRODUCTION_PROBABILITY) && 
+                                      entity_grid[i][j].energy > THRESHOLD_ENERGY_FOR_REPRODUCTION &&
+                                      !empty_positions.empty()){
+                                    entity_grid[i][j].energy = entity_grid[i][j].energy - 10;
+                                    chose_position = pick_random_cell(empty_positions);
+                                    new_carns.push_back(chose_position);
+                                    already_atualized_pos.push_back(chose_position);
+                            } else if(random_action(CARNIVORE_EAT_PROBABILITY) && !herb_positions.empty()){
+                                    chose_position = pick_random_cell(herb_positions);
+                                    herb_eated.push_back(std::make_pair(current_pos, chose_position));
+                                    already_atualized_pos.push_back(chose_position);
+                            } else if(random_action(CARNIVORE_MOVE_PROBABILITY) && !empty_positions.empty()){
+                                    chose_position = pick_random_cell(empty_positions);
+                                    carn_move.push_back(std::make_pair(current_pos, chose_position));
+                                    already_atualized_pos.push_back(chose_position);
+                            } else entity_grid[i][j].age++;
                         }
                     }
                 }
