@@ -127,6 +127,7 @@ std::vector<pos_t> check_spec_type(pos_t pos, entity_type_t type){
 }
 
 void lock_surroundings(pos_t pos){
+    entity_grid[pos.i][pos.j].mutex.lock();
     entity_grid[pos.i+1][pos.j].mutex.lock();
     entity_grid[pos.i-1][pos.j].mutex.lock();
     entity_grid[pos.i][pos.j+1].mutex.lock();
@@ -259,16 +260,7 @@ int main()
 
         // Clear the entity grid
         entity_grid.clear();
-        for (int i = 0; i < NUM_ROWS; ++i) {
-            for (int j = 0; j < NUM_ROWS; ++j) {
-                entity_grid[i][j].type = empty;
-                entity_grid[i][j].energy = 0;
-                entity_grid[i][j].age = 0;
-                // Não é necessário recriar o mutex, a menos que seja realmente necessário.
-                // entity_grid[i][j].mutex = std::mutex();
-            }
-            
-        }
+        entity_grid.assign(NUM_ROWS, std::vector<entity_t>(NUM_ROWS, {empty, 0, 0}));
         
         // Create the entities
         int i;
@@ -346,10 +338,13 @@ int main()
                     if(entity_grid[i][j].type != empty){
                         if(entity_grid[i][j].type == plant){
                             std::thread t_plant(simulate_plant,current_pos);
+                            t_plant.join();
                         } else if(entity_grid[i][j].type == herbivore){
-                            // std::thread t_plant(simulate_herb,current_pos);
+                            // std::thread t_herb(simulate_herb,current_pos);
+                            // t_herb.join();
                         } else if(entity_grid[i][j].type == carnivore){
-                            // std::thread t_plant(simulate_carn,current_pos);
+                            // std::thread t_carn(simulate_carn,current_pos);
+                            // t_carn.join();
                         }
                     }
                 }
