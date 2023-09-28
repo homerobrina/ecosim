@@ -46,7 +46,7 @@ struct entity_t
     entity_type_t type;
     int32_t energy;
     int32_t age;
-    std::mutex mutex;
+    std::mutex* mutex;
 };
 
 // Grid that contains the entities
@@ -126,42 +126,42 @@ std::vector<pos_t> check_spec_type(pos_t pos, entity_type_t type){
     return val_positions;
 }
 
-void lock_surroundings(pos_t pos){
-    entity_grid[pos.i][pos.j].mutex.lock();
-    entity_grid[pos.i+1][pos.j].mutex.lock();
-    entity_grid[pos.i-1][pos.j].mutex.lock();
-    entity_grid[pos.i][pos.j+1].mutex.lock();
-    entity_grid[pos.i][pos.j-1].mutex.lock();
-}
+// void lock_surroundings(pos_t pos){
+//     entity_grid[pos.i][pos.j].mutex.lock();
+//     entity_grid[pos.i+1][pos.j].mutex.lock();
+//     entity_grid[pos.i-1][pos.j].mutex.lock();
+//     entity_grid[pos.i][pos.j+1].mutex.lock();
+//     entity_grid[pos.i][pos.j-1].mutex.lock();
+// }
 
-void unlock_surroundings(pos_t pos){
-    entity_grid[pos.i+1][pos.j].mutex.unlock();
-    entity_grid[pos.i-1][pos.j].mutex.unlock();
-    entity_grid[pos.i][pos.j+1].mutex.unlock();
-    entity_grid[pos.i][pos.j-1].mutex.unlock();
-}
+// void unlock_surroundings(pos_t pos){
+//     entity_grid[pos.i+1][pos.j].mutex.unlock();
+//     entity_grid[pos.i-1][pos.j].mutex.unlock();
+//     entity_grid[pos.i][pos.j+1].mutex.unlock();
+//     entity_grid[pos.i][pos.j-1].mutex.unlock();
+// }
 
-void simulate_plant(pos_t pos){
-    if(entity_grid[pos.i][pos.j].age == PLANT_MAXIMUM_AGE){
-        entity_grid[pos.i][pos.j].type = empty;
-        entity_grid[pos.i][pos.j].age = 0;
-    } else if(random_action(PLANT_REPRODUCTION_PROBABILITY)){
-        lock_surroundings(pos);
-        std::vector<pos_t> empty_positions = check_spec_type(pos, empty);
-        if(!empty_positions.empty()){
-            pos_t chose_position = pick_random_cell(empty_positions);
-            entity_grid[chose_position.i][chose_position.j].type = plant;
-            entity_grid[chose_position.i][chose_position.j].age = 0;
-            already_atualized_pos.push_back(chose_position);
-        }
-        // Armazena a informação ao invés de atualizar imediatamente a matriz, para evitar que essa informação seja utilizada na mesma iteração
-        // new_plants.push_back(chose_position);
+// void simulate_plant(pos_t pos){
+//     if(entity_grid[pos.i][pos.j].age == PLANT_MAXIMUM_AGE){
+//         entity_grid[pos.i][pos.j].type = empty;
+//         entity_grid[pos.i][pos.j].age = 0;
+//     } else if(random_action(PLANT_REPRODUCTION_PROBABILITY)){
+//         lock_surroundings(pos);
+//         std::vector<pos_t> empty_positions = check_spec_type(pos, empty);
+//         if(!empty_positions.empty()){
+//             pos_t chose_position = pick_random_cell(empty_positions);
+//             entity_grid[chose_position.i][chose_position.j].type = plant;
+//             entity_grid[chose_position.i][chose_position.j].age = 0;
+//             already_atualized_pos.push_back(chose_position);
+//         }
+//         // Armazena a informação ao invés de atualizar imediatamente a matriz, para evitar que essa informação seja utilizada na mesma iteração
+//         // new_plants.push_back(chose_position);
         
-        // "Reserva" a célula para que não seja usada por outra entidade
-        entity_grid[pos.i][pos.j].age++;
-    } else entity_grid[pos.i][pos.j].age++;
-    unlock_surroundings(pos);
-}
+//         // "Reserva" a célula para que não seja usada por outra entidade
+//         entity_grid[pos.i][pos.j].age++;
+//     } else entity_grid[pos.i][pos.j].age++;
+//     unlock_surroundings(pos);
+// }
 
 // void simulate_herb(pos_t pos){
 //     int i = pos.i;
@@ -260,7 +260,7 @@ int main()
 
         // Clear the entity grid
         entity_grid.clear();
-        entity_grid.assign(NUM_ROWS, std::vector<entity_t>(NUM_ROWS, {empty, 0, 0}));
+        entity_grid.assign(NUM_ROWS, std::vector<entity_t>(NUM_ROWS, {empty, 0, 0, new std::mutex()}));
         
         // Create the entities
         int i;
@@ -337,8 +337,8 @@ int main()
                 if(check_cell(current_pos, already_atualized_pos)){
                     if(entity_grid[i][j].type != empty){
                         if(entity_grid[i][j].type == plant){
-                            std::thread t_plant(simulate_plant,current_pos);
-                            t_plant.join();
+                            // std::thread t_plant(simulate_plant,current_pos);
+                            // t_plant.join();
                         } else if(entity_grid[i][j].type == herbivore){
                             // std::thread t_herb(simulate_herb,current_pos);
                             // t_herb.join();
@@ -350,70 +350,6 @@ int main()
                 }
             }
         }
-        // Atualiza a matriz com as novas informações só depois de porcorrê-la por completo
-        // for(auto &it : new_plants){
-        //     entity_grid[it.i][it.j].type = plant;
-        //     entity_grid[it.i][it.j].age = 0;
-        // }
-        // for(auto &it : new_herbs){
-        //     entity_grid[it.i][it.j].type = herbivore;
-        //     entity_grid[it.i][it.j].age = 0;
-        //     entity_grid[it.i][it.j].energy = 100;
-        // }
-        // for(auto &it : new_carns){
-        //     entity_grid[it.i][it.j].type = carnivore;
-        //     entity_grid[it.i][it.j].age = 0;
-        //     entity_grid[it.i][it.j].energy = 100;
-        // }
-        // for(auto &it : herb_move){
-        //     entity_grid[it.second.i][it.second.j].type = herbivore;
-        //     entity_grid[it.second.i][it.second.j].age = entity_grid[it.first.i][it.first.j].age + 1;
-        //     entity_grid[it.second.i][it.second.j].energy = entity_grid[it.first.i][it.first.j].energy - 5;
-        //     entity_grid[it.first.i][it.first.j].age = 0;
-        //     entity_grid[it.first.i][it.first.j].energy = 0;
-        //     entity_grid[it.first.i][it.first.j].type = empty;
-        // }
-        // for(auto &it : carn_move){
-        //     entity_grid[it.second.i][it.second.j].type = carnivore;
-        //     entity_grid[it.second.i][it.second.j].age = entity_grid[it.first.i][it.first.j].age + 1;
-        //     entity_grid[it.second.i][it.second.j].energy = entity_grid[it.first.i][it.first.j].energy - 5;
-        //     entity_grid[it.first.i][it.first.j].age = 0;
-        //     entity_grid[it.first.i][it.first.j].energy = 0;
-        //     entity_grid[it.first.i][it.first.j].type = empty;
-        // }
-        // for(auto &it : plant_eated){
-        //     entity_grid[it.second.i][it.second.j].type = herbivore;
-        //     entity_grid[it.second.i][it.second.j].age = entity_grid[it.first.i][it.first.j].age + 1;
-        //     if(entity_grid[it.first.i][it.first.j].energy <= MAXIMUM_ENERGY - 30){
-        //         entity_grid[it.second.i][it.second.j].energy = entity_grid[it.first.i][it.first.j].energy + 30;
-        //     } else {
-        //         entity_grid[it.second.i][it.second.j].energy = MAXIMUM_ENERGY;
-        //     }
-        //     entity_grid[it.first.i][it.first.j].age = 0;
-        //     entity_grid[it.first.i][it.first.j].energy = 0;
-        //     entity_grid[it.first.i][it.first.j].type = empty;
-        // }
-        // for(auto &it : herb_eated){
-        //     entity_grid[it.second.i][it.second.j].type = carnivore;
-        //     entity_grid[it.second.i][it.second.j].age = entity_grid[it.first.i][it.first.j].age + 1;
-        //     if(entity_grid[it.first.i][it.first.j].energy <= MAXIMUM_ENERGY - 20){
-        //         entity_grid[it.second.i][it.second.j].energy = entity_grid[it.first.i][it.first.j].energy + 20;
-        //     } else {
-        //         entity_grid[it.second.i][it.second.j].energy = MAXIMUM_ENERGY;
-        //     }
-        //     entity_grid[it.first.i][it.first.j].age = 0;
-        //     entity_grid[it.first.i][it.first.j].energy = 0;
-        //     entity_grid[it.first.i][it.first.j].type = empty;
-        // }
-        // // Reseta as informações paa a próxima iteração
-        // new_plants.clear();
-        // new_herbs.clear();
-        // new_carns.clear();
-        // herb_move.clear();
-        // carn_move.clear();
-        // plant_eated.clear();
-        // herb_eated.clear();
-        // already_atualized_pos.clear();
         // Return the JSON representation of the entity grid
         nlohmann::json json_grid = entity_grid; 
         return json_grid.dump(); });
