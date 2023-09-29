@@ -70,7 +70,7 @@ pos_t pick_random_cell(std::vector<pos_t> positions)
     return positions[rand_index];
 }
 
-bool check_cell(pos_t pos, std::vector<pos_t> already_atualized_pos)
+bool check_cell(pos_t pos, std::vector<pos_t> &already_atualized_pos)
 {
     for (auto &it : already_atualized_pos)
     {
@@ -116,7 +116,7 @@ std::vector<pos_t> check_spec_type(pos_t pos, entity_type_t type){
     }
     if(j - 1 >= 0){
         if(check_cell(valid_position, already_atualized_pos)){
-            if(entity_grid[j][j-1].type == type){
+            if(entity_grid[i][j-1].type == type){
                 valid_position.i = i;
                 valid_position.j = j-1;
                 val_positions.push_back(valid_position);
@@ -126,23 +126,40 @@ std::vector<pos_t> check_spec_type(pos_t pos, entity_type_t type){
     return val_positions;
 }
 
-void lock_surroundings(pos_t pos){
-    entity_grid[pos.i][pos.j].mutex->lock();
-    entity_grid[pos.i+1][pos.j].mutex->lock();
-    entity_grid[pos.i-1][pos.j].mutex->lock();
-    entity_grid[pos.i][pos.j+1].mutex->lock();
-    entity_grid[pos.i][pos.j-1].mutex->lock();
-}
+// void lock_surroundings(pos_t pos){
+//     entity_grid[pos.i][pos.j].mutex->lock();
+//     if(pos.i + 1 < NUM_ROWS){
+//         entity_grid[pos.i+1][pos.j].mutex->lock();
+//     }
+//     if(pos.j + 1 < NUM_ROWS){
+//        entity_grid[pos.i][pos.j+1].mutex->lock();
+//     }
+//     if(pos.i - 1 >= 0){
+//         entity_grid[pos.i-1][pos.j].mutex->lock();
+//     }
+//     if(pos.j - 1 >= 0){
+//        entity_grid[pos.i][pos.j-1].mutex->lock();
+//     }
+// }
 
-void unlock_surroundings(pos_t pos){
-    entity_grid[pos.i][pos.j].mutex->unlock();
-    entity_grid[pos.i+1][pos.j].mutex->unlock();
-    entity_grid[pos.i-1][pos.j].mutex->unlock();
-    entity_grid[pos.i][pos.j+1].mutex->unlock();
-    entity_grid[pos.i][pos.j-1].mutex->unlock();
-}
+// void unlock_surroundings(pos_t pos){
+//     entity_grid[pos.i][pos.j].mutex->unlock();
+//     if(pos.i + 1 < NUM_ROWS){
+//         entity_grid[pos.i+1][pos.j].mutex->unlock();
+//     }
+//     if(pos.j + 1 < NUM_ROWS){
+//        entity_grid[pos.i][pos.j+1].mutex->unlock();
+//     }
+//     if(pos.i - 1 >= 0){
+//         entity_grid[pos.i-1][pos.j].mutex->unlock();
+//     }
+//     if(pos.j - 1 >= 0){
+//        entity_grid[pos.i][pos.j-1].mutex->unlock();
+//     }
+// }
 
 void simulate_plant(pos_t pos){
+    // lock_surroundings(pos);
     std::lock_guard<std::mutex> lock1(*entity_grid[pos.i][pos.j].mutex);
     std::lock_guard<std::mutex> lock2(*entity_grid[pos.i+1][pos.j].mutex);
     std::lock_guard<std::mutex> lock3(*entity_grid[pos.i-1][pos.j].mutex);
@@ -151,6 +168,7 @@ void simulate_plant(pos_t pos){
     if(entity_grid[pos.i][pos.j].age == PLANT_MAXIMUM_AGE){
         entity_grid[pos.i][pos.j].type = empty;
         entity_grid[pos.i][pos.j].age = 0;
+        // unlock_surroundings(pos);
     } else if(random_action(PLANT_REPRODUCTION_PROBABILITY)){
         std::vector<pos_t> empty_positions = check_spec_type(pos, empty);
         if(!empty_positions.empty()){
@@ -158,15 +176,12 @@ void simulate_plant(pos_t pos){
             entity_grid[chose_position.i][chose_position.j].type = plant;
             entity_grid[chose_position.i][chose_position.j].age = 0;
             already_atualized_pos.push_back(chose_position);
-        }
-        // Armazena a informação ao invés de atualizar imediatamente a matriz, para evitar que essa informação seja utilizada na mesma iteração
-        // new_plants.push_back(chose_position);
-        
-        // "Reserva" a célula para que não seja usada por outra entidade
+        } 
         entity_grid[pos.i][pos.j].age++;
         // unlock_surroundings(pos);
     } else {
         entity_grid[pos.i][pos.j].age++;
+        // unlock_surroundings(pos);
     }
 }
 
@@ -336,7 +351,7 @@ int main()
         pos_t valid_position;
         pos_t chose_position;
         pos_t current_pos;
-        std::vector<std::thread> active_threads;
+        std::vector<std::thread> threads;
 
         for (i = 0; i < NUM_ROWS; i++){
             for (j = 0; j < NUM_ROWS; j++){
@@ -346,19 +361,19 @@ int main()
                     if(entity_grid[i][j].type != empty){
                         if(entity_grid[i][j].type == plant){
                             std::thread t_plant(simulate_plant,current_pos);
-                            active_threads.push_back(t_plant);
+                            threads.push_back(std::move(t_plant));
                         } else if(entity_grid[i][j].type == herbivore){
                             // std::thread t_herb(simulate_herb,current_pos);
-                            // t_herb.join();
+                            // threads.push_back(std::move(t_herb));
                         } else if(entity_grid[i][j].type == carnivore){
                             // std::thread t_carn(simulate_carn,current_pos);
-                            // t_carn.join();
+                            // threads.push_back(std::move(t_carn));
                         }
                     }
                 }
             }
         }
-        for(auto& it : active_threads){
+        for(auto& it : threads){
             it.join();
         }
         already_atualized_pos.clear();
