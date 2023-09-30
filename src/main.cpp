@@ -126,49 +126,44 @@ std::vector<pos_t> check_spec_type(pos_t pos, entity_type_t type){
     return val_positions;
 }
 
-// void lock_surroundings(pos_t pos){
-//     entity_grid[pos.i][pos.j].mutex->lock();
-//     if(pos.i + 1 < NUM_ROWS){
-//         entity_grid[pos.i+1][pos.j].mutex->lock();
-//     }
-//     if(pos.j + 1 < NUM_ROWS){
-//        entity_grid[pos.i][pos.j+1].mutex->lock();
-//     }
-//     if(pos.i - 1 >= 0){
-//         entity_grid[pos.i-1][pos.j].mutex->lock();
-//     }
-//     if(pos.j - 1 >= 0){
-//        entity_grid[pos.i][pos.j-1].mutex->lock();
-//     }
-// }
+void lock_surroundings(pos_t pos){
+    entity_grid[pos.i][pos.j].mutex->lock();
+    if(pos.i + 1 < NUM_ROWS){
+        entity_grid[pos.i+1][pos.j].mutex->lock();
+    }
+    if(pos.j + 1 < NUM_ROWS){
+       entity_grid[pos.i][pos.j+1].mutex->lock();
+    }
+    if(pos.i - 1 >= 0){
+        entity_grid[pos.i-1][pos.j].mutex->lock();
+    }
+    if(pos.j - 1 >= 0){
+       entity_grid[pos.i][pos.j-1].mutex->lock();
+    }
+}
 
-// void unlock_surroundings(pos_t pos){
-//     entity_grid[pos.i][pos.j].mutex->unlock();
-//     if(pos.i + 1 < NUM_ROWS){
-//         entity_grid[pos.i+1][pos.j].mutex->unlock();
-//     }
-//     if(pos.j + 1 < NUM_ROWS){
-//        entity_grid[pos.i][pos.j+1].mutex->unlock();
-//     }
-//     if(pos.i - 1 >= 0){
-//         entity_grid[pos.i-1][pos.j].mutex->unlock();
-//     }
-//     if(pos.j - 1 >= 0){
-//        entity_grid[pos.i][pos.j-1].mutex->unlock();
-//     }
-// }
+void unlock_surroundings(pos_t pos){
+    entity_grid[pos.i][pos.j].mutex->unlock();
+    if(pos.i + 1 < NUM_ROWS){
+        entity_grid[pos.i+1][pos.j].mutex->unlock();
+    }
+    if(pos.j + 1 < NUM_ROWS){
+       entity_grid[pos.i][pos.j+1].mutex->unlock();
+    }
+    if(pos.i - 1 >= 0){
+        entity_grid[pos.i-1][pos.j].mutex->unlock();
+    }
+    if(pos.j - 1 >= 0){
+       entity_grid[pos.i][pos.j-1].mutex->unlock();
+    }
+}
 
 void simulate_plant(pos_t pos){
-    // lock_surroundings(pos);
-    std::lock_guard<std::mutex> lock1(*entity_grid[pos.i][pos.j].mutex);
-    std::lock_guard<std::mutex> lock2(*entity_grid[pos.i+1][pos.j].mutex);
-    std::lock_guard<std::mutex> lock3(*entity_grid[pos.i-1][pos.j].mutex);
-    std::lock_guard<std::mutex> lock4(*entity_grid[pos.i][pos.j+1].mutex);
-    std::lock_guard<std::mutex> lock5(*entity_grid[pos.i][pos.j-1].mutex);
+    lock_surroundings(pos);
     if(entity_grid[pos.i][pos.j].age == PLANT_MAXIMUM_AGE){
         entity_grid[pos.i][pos.j].type = empty;
         entity_grid[pos.i][pos.j].age = 0;
-        // unlock_surroundings(pos);
+        unlock_surroundings(pos);
     } else if(random_action(PLANT_REPRODUCTION_PROBABILITY)){
         std::vector<pos_t> empty_positions = check_spec_type(pos, empty);
         if(!empty_positions.empty()){
@@ -178,10 +173,10 @@ void simulate_plant(pos_t pos){
             already_atualized_pos.push_back(chose_position);
         } 
         entity_grid[pos.i][pos.j].age++;
-        // unlock_surroundings(pos);
+        unlock_surroundings(pos);
     } else {
         entity_grid[pos.i][pos.j].age++;
-        // unlock_surroundings(pos);
+        unlock_surroundings(pos);
     }
 }
 
@@ -283,6 +278,11 @@ int main()
         // Clear the entity grid
         entity_grid.clear();
         entity_grid.assign(NUM_ROWS, std::vector<entity_t>(NUM_ROWS, {empty, 0, 0, new std::mutex()}));
+        for(int i = 0; i < NUM_ROWS; i++){
+            for(int j = 0; i < NUM_ROWS; i++){
+                entity_grid[i][j].mutex = new std::mutex();
+            }
+        }
         
         // Create the entities
         int i;
